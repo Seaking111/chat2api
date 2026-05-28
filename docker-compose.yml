@@ -4,9 +4,6 @@ services:
       context: https://github.com/Seaking111/chat2api-docker.git#main
     container_name: chat2api
     restart: unless-stopped
-    networks:
-      proxy-network:
-        ipv4_address: 172.20.0.10
     ports:
       - "8080:8080"
       - "3000:3000"
@@ -14,10 +11,3 @@ services:
       - ./data:/app/data
     environment:
       - TZ=Asia/Shanghai
-
-networks:
-  proxy-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/24
