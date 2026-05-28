@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat2API 管理面板</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { text-align: center; color: #333; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 30px; }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .status-card {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .status-label { font-size: 12px; color: #888; margin-bottom: 5px; }
+        .status-value { font-size: 20px; font-weight: bold; color: #333; }
+        .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #4caf50; }
+        
+        .section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section h2 { color: #667eea; margin-bottom: 15px; font-size: 18px; }
+        
+        .code-block {
+            background: #1e1e1e;
+            color: #4ec9b0;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #555; }
+        select, input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        select:focus, input:focus { outline: none; border-color: #667eea; }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-del {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .model-tag {
+            display: inline-block;
+            background: #e8eaf6;
+            color: #667eea;
+            padding: 5px 12px;
+            border-radius: 15px;
+            margin: 3px;
+            font-size: 12px;
+        }
+        
+        .hint { color: #888; font-size: 12px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Chat2API</h1>
+        <p class="subtitle">AI 模型代理服务管理面板</p>
+
+        <div class="status-grid">
+            <div class="status-card">
+                <div class="status-label">服务状态</div>
+                <div class="status-value" id="serverStatus"><span class="dot"></span> 检测中</div>
+            </div>
+            <div class="status-card">
+                <div class="status-label">API 端口</div>
+                <div class="status-value">8080</div>
+            </div>
+            <div class="status-card">
+                <div class="status-label">管理面板</div>
+                <div class="status-value">3000</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📡 API 地址</h2>
+            <div class="code-block" id="apiEndpoint">http://localhost:8080/v1</div>
+            <p class="hint">复制此地址到 AI 客户端使用</p>
+        </div>
+
+        <div class="section">
+            <h2>🔌 供应商管理</h2>
+            <div class="form-group">
+                <label>选择供应商</label>
+                <select id="providerSelect">
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="glm">GLM (智谱清言)</option>
+                    <option value="kimi">Kimi (月之暗面)</option>
+                    <option value="minimax">MiniMax</option>
+                    <option value="qwen">Qwen (通义千问)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Token</label>
+                <input type="password" id="tokenInput" placeholder="输入 Token">
+            </div>
+            <button class="btn" onclick="addProvider()">添加供应商</button>
+            <div id="providerList" style="margin-top:15px;"></div>
+        </div>
+
+        <div class="section">
+            <h2>🤖 可用模型</h2>
+            <div id="modelList">
+                <p style="color:#888;">添加供应商后显示模型</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkStatus();
+            loadProviders();
+            showModels();
+            document.getElementById('apiEndpoint').textContent = 
+                `http://${window.location.hostname}:8080/v1`;
+        });
+
+        async function checkStatus() {
+            try {
+                const res = await fetch(`http://${window.location.hostname}:8080/health`);
+                if (res.ok) {
+                    document.getElementById('serverStatus').innerHTML = '<span class="dot"></span> 运行中';
+                }
+            } catch(e) {
+                document.getElementById('serverStatus').innerHTML = '<span class="dot" style="background:#ff5252;"></span> 未连接';
+            }
+            setTimeout(checkStatus, 10000);
+        }
+
+        function addProvider() {
+            const provider = document.getElementById('providerSelect').value;
+            const token = document.getElementById('tokenInput').value;
+            if (!token) { alert('请输入 Token'); return; }
+            
+            const providers = JSON.parse(localStorage.getItem('chat2api_providers') || '[]');
+            providers.push({ provider, token, time: new Date().toLocaleString() });
+            localStorage.setItem('chat2api_providers', JSON.stringify(providers));
+            
+            document.getElementById('tokenInput').value = '';
+            alert('✅ 已添加！重启容器生效');
+            loadProviders();
+            showModels();
+        }
+
+        function loadProviders() {
+            const providers = JSON.parse(localStorage.getItem('chat2api_providers') || '[]');
+            const list = document.getElementById('providerList');
+            if (providers.length === 0) {
+                list.innerHTML = '<p style="color:#888;">暂无供应商</p>';
+                return;
+            }
+            list.innerHTML = providers.map((p, i) => `
+                <div class="item-row">
+                    <span><strong>${p.provider.toUpperCase()}</strong></span>
+                    <span style="color:#888;font-size:12px;">${p.time}</span>
+                    <button class="btn-del" onclick="delProvider(${i})">删除</button>
+                </div>
+            `).join('');
+        }
+
+        function delProvider(i) {
+            const providers = JSON.parse(localStorage.getItem('chat2api_providers') || '[]');
+            providers.splice(i, 1);
+            localStorage.setItem('chat2api_providers', JSON.stringify(providers));
+            loadProviders();
+            showModels();
+        }
+
+        function showModels() {
+            const providers = JSON.parse(localStorage.getItem('chat2api_providers') || '[]');
+            const list = document.getElementById('modelList');
+            if (providers.length === 0) {
+                list.innerHTML = '<p style="color:#888;">添加供应商后显示模型</p>';
+                return;
+            }
+            const models = {
+                deepseek: ['deepseek-chat', 'deepseek-coder'],
+                glm: ['glm-4-plus', 'glm-4-flash'],
+                kimi: ['kimi-latest'],
+                minimax: ['abab6.5s-chat'],
+                qwen: ['qwen-plus', 'qwen-max']
+            };
+            let html = '';
+            providers.forEach(p => {
+                (models[p.provider] || [p.provider]).forEach(m => {
+                    html += `<span class="model-tag">${m} (${p.provider})</span>`;
+                });
+            });
+            list.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
