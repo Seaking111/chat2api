@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   chat2api:
     build:
-      context: https://github.com/你的用户名/chat2api-docker.git#main
+      context: https://github.com/Seaking111/chat2api-docker.git#main
     container_name: chat2api
     restart: unless-stopped
     networks:
